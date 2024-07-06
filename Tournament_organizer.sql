@@ -8,6 +8,7 @@ CREATE TABLE players(
     email VARCHAR(255), 
     phone_number VARCHAR(15), 
     current_match_id int
+    looking_for_match BOOLEAN
 );
 
 
