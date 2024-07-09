@@ -1,4 +1,11 @@
 from admin_commands import *
-#search_player("smith") 
+#new_player("john", "smith", "john.smith@gmail.com", "203-555-5555")
+#new_player("bob", "smith", "john.smith@gmail.com", "203-567-5555")
+#check_in(1)
+#check_in(2)
 #new_tournament()
-check_out_all()
+#new_match(1,1,1,2)
+#display_current_matches()
+#report_match(2,0,0,2)
+#check_out_all()
+#crown_winner(1,1)

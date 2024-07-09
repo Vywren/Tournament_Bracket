@@ -1,4 +1,5 @@
 from psycopg2 import *
+#base functions to execute commands
 def do_execute(command, param):
     account =  open("account_information.txt","r")
     conn = connect(database = str(account.readline().replace('\n', '')), 
@@ -39,8 +40,9 @@ def search(command, param):
     cur.close()
     conn.close()
     return ids
-def new_player(first_name, last_name, wins, losses, draws, email, phone_number, looking_for_match):
-    do_execute("INSERT INTO players (first_name, last_name, wins, losses, draws, email, phone_number,looking_for_match) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (first_name, last_name, wins, losses, draws, email, phone_number,bool(looking_for_match)))
+#player editing related commands
+def new_player(first_name, last_name, email, phone_number):
+    do_execute("INSERT INTO players (first_name, last_name, email, phone_number) VALUES (%s, %s, %s, %s)", (str(first_name), str(last_name), str(email), str(phone_number)))
 
    
 def update_player_phone_number(phone_number, id):
@@ -55,28 +57,29 @@ def update_player_email(email, id):
 def remove_player(id):
     do_execute("DELETE FROM players WHERE user_id = %s", (str(id),))
 
-def update_match(match_id, id1,id2):
-    do_execute("UPDATE players SET current_match_id = %s WHERE user_id = %s OR user_id = %s", (str(match_id),str(id1),str(id2)))
-
 def check_in(id):
     do_execute("UPDATE players SET looking_for_match = true WHERE user_id = %s", (str(id),))
 def check_out(id):
     do_execute("UPDATE players SET looking_for_match = false WHERE user_id = %s", (str(id),))
 def check_out_all():
-    do_execute("UPDATE players SET looking_for_match = false, current_match_id = NULL",None)
+    do_execute("UPDATE players SET looking_for_match = false",None)
+    
+#match editing functions
+def new_match(tournament_round, tournament_id, id1,id2):
+    do_execute("INSERT INTO matches (round, id, player1_id, player2_id, complete) VALUES (%s,%s,%s,%s,%s)", (str(tournament_round),str(tournament_id),str(id1),str(id2), str("false")))
+def report_match(wins,losses,draws,match_id):
+    do_execute("UPDATE matches SET player1_wins = %s, player1_losses = %s, player1_draws = %s, complete = True WHERE match_id = %s",(wins, losses, draws, match_id))
+def display_current_matches():
+    search("SELECT * FROM matches WHERE complete = false;",None)    
+#todo: complete tournament editing functions
 def new_tournament():
     print("Starting new tournament: \n")
-    player_list =  search("SELECT * FROM players WHERE looking_for_match = true AND current_match_id = NULL;",None)
+    do_execute("INSERT INTO tournaments (tournament_round) VALUES (1)",None)
+    player_list =  search("SELECT * FROM players WHERE looking_for_match = true",None)
     print(player_list)
 def print_bracket():
-    #todo make this do something
     print("will print bracket when finished")
+def crown_winner(winner_id, tournament_id):
+    do_execute("UPDATE tournaments SET winner_id = %s WHERE tournament_id = %s", (winner_id, tournament_id))
     
     
-#new_player("jenny", "smith", 0, 0, 0, "jenny.smith@gmail.com", "203-555-5555", 0)
-#update_player_phone_number("555-555-5555",5)
-#remove_player(5)
-
-#update_match(1,1,2)
-#check_out_all()
-#search_player("smith")
