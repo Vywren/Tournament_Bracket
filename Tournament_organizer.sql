@@ -1,3 +1,8 @@
+DROP TABLE matches;
+DROP TABLE tournaments;
+DROP TABLE players;
+
+
 CREATE TABLE players(
     user_id SERIAL UNIQUE, 
     first_name VARCHAR(50) NOT NULL, 
@@ -5,7 +10,7 @@ CREATE TABLE players(
     wins int DEFAULT 0 NOT NULL, 
     losses int DEFAULT 0 NOT NULL, 
     draws int DEFAULT 0 NOT NULL, 
-    email VARCHAR(255), 
+    email VARCHAR(255) UNIQUE, 
     phone_number VARCHAR(15), 
     looking_for_match BOOLEAN
 );
@@ -14,6 +19,8 @@ ALTER table players ALTER COLUMN looking_for_match SET DEFAULT false;
 
 
 CREATE TABLE tournaments(
+    tournament_name varchar(50) NOT NULL,
+    tournament_date varchar(50) NOT NULL,
     winner_id int REFERENCES players(user_id), 
     tournament_id SERIAL UNIQUE,
     tournament_round int NOT NULL
