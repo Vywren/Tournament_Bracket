@@ -67,6 +67,7 @@ def check_out(id):
 def check_out_all():
     do_execute("UPDATE players SET looking_for_match = false",None)
     
+
 #match editing functions
 def new_match(tournament_round, tournament_id, id1,id2):
     do_execute("INSERT INTO matches (round, id, player1_id, player2_id, complete) VALUES (%s,%s,%s,%s,%s)", (str(tournament_round),str(tournament_id),str(id1),str(id2), str("false")))
@@ -80,21 +81,35 @@ def display_current_matches():
     for i in msg:
         ids.append(i[0])
     return ids
-#todo: complete tournament editing functions
-def new_tournament(tournament_name, tournament_date):
+
+#seeding related functions
+def unseed(tournament_id, seed):
+    return search("SELECT * FROM seeding WHERE tournament_id = %s and seed = %s", (str(tournament_id),str(seed)))
+#def seed(id,seed,tournament):
+ #   "INSERT INTO seeding (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)"
+#tournament functions
+def quick_tournament(tournament_name, tournament_date):
     print("Starting new tournament: \n")
+    #makes new tournament table entry
     do_execute("INSERT INTO tournaments (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)",(tournament_name, tournament_date))
-    msg =  search("SELECT * FROM players WHERE looking_for_match = true",None)
+    tournament_id = search("SELECT max(tournament_id) FROM tournaments WHERE tournament_name = %s and tournament_date = %s")
+    #looks for available players
+    msg = search("SELECT * FROM players WHERE looking_for_match = true",None)
     player_list = []
+    seed = 0
     for i in msg:
+        seed = seed + 1
         player_list.append(i[0])
         check_out(i[0])
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",tournament_id, i[0], seed)
+    #assign seeds for convenience
+    
     return player_list
 
-def pair_up(round, tournament_id, player_list):
+def pair_up(round, tournament_id, seeded_player_list):
     skip = 0
     saved_player = -1
-    for player in player_list:
+    for player in seeded_player_list:
         print(player)
         if skip == 0:
             skip = 1
@@ -127,3 +142,4 @@ def crown_winner(winner_id, tournament_id):
     do_execute("UPDATE tournaments SET winner_id = %s WHERE tournament_id = %s", (winner_id, tournament_id))
     
     
+#notes test unseed and all tournament functions

@@ -38,5 +38,9 @@ CREATE TABLE matches(
     complete BOOLEAN NOT NULL
 );
 
-
+CREATE TABLE seeding(
+    player_id int REFERENCES players(user_id) NOT NULL,
+    tournament_id int REFERENCES tournaments (tournament_id),
+    seed int NOT NULL
+);
 
