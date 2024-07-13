@@ -84,7 +84,7 @@ def display_current_matches():
 
 #seeding related functions
 def unseed(tournament_id, seed):
-    return search("SELECT * FROM seeding WHERE tournament_id = %s and seed = %s", (str(tournament_id),str(seed)))
+    return search("SELECT * FROM seeding WHERE tournament_id = %s and seed = %s", (str(tournament_id),str(seed)))[0][0]
 #def seed(id,seed,tournament):
  #   "INSERT INTO seeding (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)"
 #tournament functions
@@ -92,30 +92,64 @@ def quick_tournament(tournament_name, tournament_date):
     print("Starting new tournament: \n")
     #makes new tournament table entry
     do_execute("INSERT INTO tournaments (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)",(tournament_name, tournament_date))
-    tournament_id = search("SELECT max(tournament_id) FROM tournaments WHERE tournament_name = %s and tournament_date = %s")
+    tournament_id = search("SELECT max(tournament_id) FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
     #looks for available players
     msg = search("SELECT * FROM players WHERE looking_for_match = true",None)
     player_list = []
+    seeded_list = []
     seed = 0
     for i in msg:
         seed = seed + 1
+        seeded_list.append(seed)
         player_list.append(i[0])
         check_out(i[0])
-        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",tournament_id, i[0], seed)
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, i[0], seed))
     #assign seeds for convenience
-    
-    return player_list
+    #print("length of list: " + str(len(seeded_list)))
+    alterable = seeded_list
+    for round_num in range(1,int(len(seeded_list)/2+1)):
+            print("round_num: " + str(round_num))
+            print(alterable)
+            pair_up(round_num, tournament_id, alterable)
+            for i in range(0,len(alterable)):
+                if i %2 == 1:
+                    if alterable[i] + 2 <= len(alterable):
+                        alterable[i] = alterable[i] + 2
+                    else:
+                        alterable[i] = 2
 
-def pair_up(round, tournament_id, seeded_player_list):
+    for round_num in range(int(len(seeded_list)/2)+1,int(len(seeded_list))):
+            if round_num == int(len(seeded_list)/2)+1:
+                for i in range(0,len(alterable),4):
+                    if(alterable[i] + 3 <= len(alterable)):
+                        alterable[i+3] = alterable[i+3] - 3 
+                        alterable[i] = alterable[i] + 3
+            else:
+                for i in range(0,len(alterable),4):
+                    if(i + 4 < len(alterable)):
+                        alterable[i] = alterable[i] + 4
+                    else:
+                        alterable[i] = 4
+                    if(i + 6 < len(alterable)):
+                        alterable[i+2] = alterable[i+2]+4
+                    else:
+                        alterable[i+2] = 3
+            print("round_num: " + str(round_num))
+            print(alterable)
+            pair_up(round_num, tournament_id, alterable)
+            
+    return seeded_list
+
+def pair_up(round_num, tournament_id, seeded_player_list):
     skip = 0
     saved_player = -1
     for player in seeded_player_list:
-        print(player)
+        print(unseed(tournament_id, player))
         if skip == 0:
             skip = 1
-            saved_player = player
+            saved_player = unseed(tournament_id, player)
         else:
-            new_match(round, tournament_id, saved_player, player)
+            new_match(round_num, tournament_id, saved_player, unseed(tournament_id, player))
             skip = 0
             
 def display_unfinished():
@@ -137,6 +171,8 @@ def increment_round(tournament_id):
         do_execute("UPDATE tournaments SET tournament_round = %s WHERE tournament_id = %s;",(round, tournament_id))
     else:
         print("tournament does not exist")
+        
+    
     
 def crown_winner(winner_id, tournament_id):
     do_execute("UPDATE tournaments SET winner_id = %s WHERE tournament_id = %s", (winner_id, tournament_id))

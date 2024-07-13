@@ -1,6 +1,7 @@
 DROP TABLE matches;
+DROP TABLE seeding;
 DROP TABLE tournaments;
-DROP TABLE players;
+DROP TABLE players CASCADE;
 
 
 CREATE TABLE players(
