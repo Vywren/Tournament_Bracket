@@ -1,6 +1,7 @@
 DROP TABLE matches;
+DROP TABLE seeding;
 DROP TABLE tournaments;
-DROP TABLE players;
+DROP TABLE players CASCADE;
 
 
 CREATE TABLE players(
@@ -38,5 +39,9 @@ CREATE TABLE matches(
     complete BOOLEAN NOT NULL
 );
 
-
+CREATE TABLE seeding(
+    player_id int REFERENCES players(user_id) NOT NULL,
+    tournament_id int REFERENCES tournaments (tournament_id),
+    seed int NOT NULL
+);
 

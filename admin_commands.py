@@ -67,6 +67,7 @@ def check_out(id):
 def check_out_all():
     do_execute("UPDATE players SET looking_for_match = false",None)
     
+
 #match editing functions
 def new_match(tournament_round, tournament_id, id1,id2):
     do_execute("INSERT INTO matches (round, id, player1_id, player2_id, complete) VALUES (%s,%s,%s,%s,%s)", (str(tournament_round),str(tournament_id),str(id1),str(id2), str("false")))
@@ -80,27 +81,61 @@ def display_current_matches():
     for i in msg:
         ids.append(i[0])
     return ids
-#todo: complete tournament editing functions
-def new_tournament(tournament_name, tournament_date):
+
+#seeding related functions
+def unseed(tournament_id, seed):
+    return search("SELECT * FROM seeding WHERE tournament_id = %s and seed = %s", (str(tournament_id),str(seed)))[0][0]
+#def seed(id,seed,tournament):
+ #   "INSERT INTO seeding (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)"
+#tournament functions
+def quick_tournament(tournament_name, tournament_date):
     print("Starting new tournament: \n")
+    #makes new tournament table entry
     do_execute("INSERT INTO tournaments (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)",(tournament_name, tournament_date))
-    msg =  search("SELECT * FROM players WHERE looking_for_match = true",None)
+    tournament_id = search("SELECT max(tournament_id) FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
+    #looks for available players
+    msg = search("SELECT * FROM players WHERE looking_for_match = true",None)
     player_list = []
+    seeded_list = []
+    seed = 0
     for i in msg:
+        seed = seed + 1
+        seeded_list.append(seed)
         player_list.append(i[0])
         check_out(i[0])
-    return player_list
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, i[0], seed))
+    #assign seeds for convenience
+    print("length of list: " + str(len(seeded_list)))
+    for round_num in range(1,int(len(seeded_list)+1)):
+        print("round_num: " + str(round_num))
+        for i in range(1,len(seeded_list),round_num+1):
+            print(i)
+            print(i+round_num)
+            print(i - round_num)
+            if(i + round_num <= len(seeded_list)):
+                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i + round_num))
+            else:
+                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, (i + round_num)-len(seeded_list)))
+            if(i - round_num >= 1):
+                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i - round_num))
+            else:
+                print("stopped here by" + str(i))
+                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, len(seeded_list) + i - round_num))
+        print_pairings(round_num = round_num,tournament = tournament_id)
+            
+            
+    return seeded_list
 
-def pair_up(round, tournament_id, player_list):
+def pair_up(round_num, tournament_id, seeded_player_list):
     skip = 0
     saved_player = -1
-    for player in player_list:
-        print(player)
+    for player in seeded_player_list:
+        print(unseed(tournament_id, player))
         if skip == 0:
             skip = 1
-            saved_player = player
+            saved_player = unseed(tournament_id, player)
         else:
-            new_match(round, tournament_id, saved_player, player)
+            new_match(round_num, tournament_id, saved_player, unseed(tournament_id, player))
             skip = 0
             
 def display_unfinished():
@@ -122,8 +157,11 @@ def increment_round(tournament_id):
         do_execute("UPDATE tournaments SET tournament_round = %s WHERE tournament_id = %s;",(round, tournament_id))
     else:
         print("tournament does not exist")
+        
+    
     
 def crown_winner(winner_id, tournament_id):
     do_execute("UPDATE tournaments SET winner_id = %s WHERE tournament_id = %s", (winner_id, tournament_id))
     
     
+#notes test unseed and all tournament functions
