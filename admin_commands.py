@@ -105,38 +105,24 @@ def quick_tournament(tournament_name, tournament_date):
         check_out(i[0])
         do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, i[0], seed))
     #assign seeds for convenience
-    #print("length of list: " + str(len(seeded_list)))
-    alterable = seeded_list
-    for round_num in range(1,int(len(seeded_list)/2+1)):
-            print("round_num: " + str(round_num))
-            print(alterable)
-            pair_up(round_num, tournament_id, alterable)
-            for i in range(0,len(alterable)):
-                if i %2 == 1:
-                    if alterable[i] + 2 <= len(alterable):
-                        alterable[i] = alterable[i] + 2
-                    else:
-                        alterable[i] = 2
-
-    for round_num in range(int(len(seeded_list)/2)+1,int(len(seeded_list))):
-            if round_num == int(len(seeded_list)/2)+1:
-                for i in range(0,len(alterable),4):
-                    if(alterable[i] + 3 <= len(alterable)):
-                        alterable[i+3] = alterable[i+3] - 3 
-                        alterable[i] = alterable[i] + 3
+    print("length of list: " + str(len(seeded_list)))
+    for round_num in range(1,int(len(seeded_list)+1)):
+        print("round_num: " + str(round_num))
+        for i in range(1,len(seeded_list),round_num+1):
+            print(i)
+            print(i+round_num)
+            print(i - round_num)
+            if(i + round_num <= len(seeded_list)):
+                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i + round_num))
             else:
-                for i in range(0,len(alterable),4):
-                    if(i + 4 < len(alterable)):
-                        alterable[i] = alterable[i] + 4
-                    else:
-                        alterable[i] = 4
-                    if(i + 6 < len(alterable)):
-                        alterable[i+2] = alterable[i+2]+4
-                    else:
-                        alterable[i+2] = 3
-            print("round_num: " + str(round_num))
-            print(alterable)
-            pair_up(round_num, tournament_id, alterable)
+                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, (i + round_num)-len(seeded_list)))
+            if(i - round_num >= 1):
+                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i - round_num))
+            else:
+                print("stopped here by" + str(i))
+                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, len(seeded_list) + i - round_num))
+        print_pairings(round_num = round_num,tournament = tournament_id)
+            
             
     return seeded_list
 
