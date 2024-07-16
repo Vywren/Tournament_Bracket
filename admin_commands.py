@@ -88,13 +88,24 @@ def unseed(tournament_id, seed):
 #def seed(id,seed,tournament):
  #   "INSERT INTO seeding (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)"
 #tournament functions
-def quick_tournament(tournament_name, tournament_date):
+def quick_tournament_round_robin(tournament_name, tournament_date):
     print("Starting new tournament: \n")
+    #TODO CHECK IF TOURNAMENT ALREADY EXISTS BEFORE MAKING A NEW ONE
+    print(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date)) != None)
+    if(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))!= []):
+        print("Tournament with the same name was already created today, please try another name")
+        return -1
     #makes new tournament table entry
     do_execute("INSERT INTO tournaments (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)",(tournament_name, tournament_date))
-    tournament_id = search("SELECT max(tournament_id) FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
+    tournament_id = search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
     #looks for available players
-    msg = search("SELECT * FROM players WHERE looking_for_match = true",None)
+    msg = search("SELECT * FROM players WHERE looking_for_match = true LIMIT 8",None)
+    print(msg)
+    if((len(msg) > 4 and len(msg) < 7)):
+        msg = msg[0:3]
+    if(len(msg) < 4):
+        print("too few players, terminating")
+        return -1
     player_list = []
     seeded_list = []
     seed = 0
@@ -105,32 +116,35 @@ def quick_tournament(tournament_name, tournament_date):
         check_out(i[0])
         do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, i[0], seed))
     #assign seeds for convenience
-    print("length of list: " + str(len(seeded_list)))
-    for round_num in range(1,int(len(seeded_list)+1)):
-        print("round_num: " + str(round_num))
-        for i in range(1,len(seeded_list),round_num+1):
-            print(i)
-            print(i+round_num)
-            print(i - round_num)
-            if(i + round_num <= len(seeded_list)):
-                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i + round_num))
-            else:
-                new_match(round_num, tournament_id, unseed(tournament_id, i), unseed(tournament_id, (i + round_num)-len(seeded_list)))
-            if(i - round_num >= 1):
-                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, i - round_num))
-            else:
-                print("stopped here by" + str(i))
-                new_match(round_num+1, tournament_id, unseed(tournament_id, i), unseed(tournament_id, len(seeded_list) + i - round_num))
-        print_pairings(round_num = round_num,tournament = tournament_id)
-            
-            
-    return seeded_list
+    if len(seeded_list) % 2 != 0:
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, 1, seed))
+    save = 0
+    for x in range(1,4):
+        if x != 1:
+            for player in range(0, len(seeded_list), 4):
+                save = seeded_list[player + 2]
+                seeded_list[player + 2] = seeded_list[player + 3]
+                seeded_list[player + 3] = save
+        pair_up(x, tournament_id, seeded_list)
+        for player in range(0, len(seeded_list), 4):
+            save = seeded_list[player] 
+            seeded_list[player] = seeded_list[player + 3]
+            seeded_list[player+3] = save
+        print_pairings(x, tournament_id)
 
+def quick_tournament_bracket(tournament_name, tournament_date):     
+    tournament_id = search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
+    player_list = search("SELECT DISTINCT player2_id FROM matches WHERE id = %s",(tournament_id,))
+    print(player_list)
+    for player in player_list:
+        print(int (search("SELECT sum(player1_wins) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_losses) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0))
+        print(int (search("SELECT sum(player1_losses) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_wins) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0))
+        print(int (search("SELECT sum(player1_draws) FROM matches WHERE player1_id = %s OR player2_id = %s AND id = %s",(str(player[0]),str(player[0]), str(tournament_id)))[0][0] or 0))
 def pair_up(round_num, tournament_id, seeded_player_list):
     skip = 0
     saved_player = -1
     for player in seeded_player_list:
-        print(unseed(tournament_id, player))
+        #print(unseed(tournament_id, player))
         if skip == 0:
             skip = 1
             saved_player = unseed(tournament_id, player)
