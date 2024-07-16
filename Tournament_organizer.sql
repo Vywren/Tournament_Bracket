@@ -32,7 +32,7 @@ CREATE TABLE matches(
     match_id SERIAL,
     id int REFERENCES tournaments (tournament_id),
     player1_id int REFERENCES players(user_id) NOT NULL,
-    player2_id int, 
+    player2_id int REFERENCES players(user_id) NOT NULL, 
     player1_wins int DEFAULT 0 NOT NULL,
     player1_losses int DEFAULT 0 NOT NULL,
     player1_draws int DEFAULT 0 NOT NULL,
