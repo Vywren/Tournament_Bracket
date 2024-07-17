@@ -16,8 +16,24 @@ check_in("john.brown@gmail.com")
 check_in("bob.brown@gmail.com")
 check_in("kenny.brown@gmail.com")
 check_in("rob.brown@gmail.com")
-players = quick_tournament_round_robin("test tournament","7/10/2024")
-quick_tournament_bracket("test tournament","7/10/2024")
+player_list = quick_tournament()
+single_elim("test tournament","7/16/24",player_list)
+print_pairings(1,1)
+for i in range(1, 5):
+    report_match(2,1,0,i)
+continue_single_elim(round_num = 1,tournament_id = 1)
+print_pairings(2,1)
+for i in range(5, 7):
+    report_match(2,1,0,i)
+continue_single_elim(round_num = 2,tournament_id = 1)
+print_pairings(3,1)
+report_match(3,0,0,7)
+continue_single_elim(round_num = 3,tournament_id = 1)
+'''players = quick_tournament_round_robin("test tournament","7/10/2024")
+
+
+#quick_tournament_bracket("test tournament","7/10/2024")
+
 #pair_up(round_num = 1,tournament_id = 1,seeded_player_list = players)
 #print_pairings(round_num = 1,tournament = 1)
 #print_pairings(round_num = 2,tournament = 1)
@@ -26,4 +42,4 @@ quick_tournament_bracket("test tournament","7/10/2024")
 #report_match(2,0,0,1)
 #increment_round(1)
 #display_current_matches()
-#crown_winner(1,1)9
+#crown_winner(1,1)'''

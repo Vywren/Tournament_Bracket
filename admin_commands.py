@@ -50,8 +50,8 @@ def search_player(name):
         ids.append(i[0])
     return ids
 def find_name(id):
-    msg = search("SELECT * FROM players WHERE user_id = %s;",(str(id),))
-    return msg[0]
+    msg = search("SELECT first_name, last_name FROM players WHERE user_id = %s;",(str(id),))
+    return msg[0][0] + " " + msg[0][1]
 def update_player_email(email, id):
     do_execute("UPDATE players SET email = %s where user_id = %s",(str(email), str(id)))
 
@@ -81,7 +81,18 @@ def display_current_matches():
     for i in msg:
         ids.append(i[0])
     return ids
-
+def quick_tournament():
+    msg = search("SELECT * FROM players WHERE looking_for_match = true LIMIT 8",None)
+    if len(msg) < 4:
+        print("not enough players for a tournament")
+        return -1
+    
+    if len(msg)<7 and len(msg)>4:
+        msg = msg[0:3]
+    
+    if len(msg) %4 == 3:
+        msg.append(1)
+    return msg
 #seeding related functions
 def unseed(tournament_id, seed):
     return search("SELECT * FROM seeding WHERE tournament_id = %s and seed = %s", (str(tournament_id),str(seed)))[0][0]
@@ -90,7 +101,6 @@ def unseed(tournament_id, seed):
 #tournament functions
 def quick_tournament_round_robin(tournament_name, tournament_date):
     print("Starting new tournament: \n")
-    #TODO CHECK IF TOURNAMENT ALREADY EXISTS BEFORE MAKING A NEW ONE
     print(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date)) != None)
     if(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))!= []):
         print("Tournament with the same name was already created today, please try another name")
@@ -136,21 +146,42 @@ def quick_tournament_bracket(tournament_name, tournament_date):
     tournament_id = search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
     player_list = search("SELECT DISTINCT player2_id FROM matches WHERE id = %s",(tournament_id,))
     print(player_list)
+    count = 0
+    highest = [0,0]
+    second_highest = [0,0]
+    qualified = []
     for player in player_list:
-        print(int (search("SELECT sum(player1_wins) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_losses) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0))
-        print(int (search("SELECT sum(player1_losses) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_wins) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0))
-        print(int (search("SELECT sum(player1_draws) FROM matches WHERE player1_id = %s OR player2_id = %s AND id = %s",(str(player[0]),str(player[0]), str(tournament_id)))[0][0] or 0))
+        
+        if count >= 4:
+            count = 1
+            qualified.append(highest[1])
+            qualified.append(second_highest[1])
+            highest = [0,0]
+            second_highest = [0,0]
+        wins = int (search("SELECT sum(player1_wins) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_losses) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0)
+        losses = int (search("SELECT sum(player1_losses) FROM matches WHERE player1_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0) + int(search("SELECT sum(player1_wins) FROM matches WHERE player2_id = %s AND id = %s",(str(player[0]), str(tournament_id)))[0][0] or 0)
+        winLoss = wins - losses
+        if winLoss > highest[0]:
+            highest[0] = winLoss
+            highest[1] = player[0]
+        elif winLoss > second_highest[0]:
+            second_highest[0] = winLoss
+            second_highest[1] = player[0]
+        #draws = int (search("SELECT sum(player1_draws) FROM matches WHERE player1_id = %s OR player2_id = %s AND id = %s",(str(player[0]),str(player[0]), str(tournament_id)))[0][0] or 0)
+        count = count + 1
+    return qualified
+        
+def advance_quick_tournament(round_num):
+    print("go to next")
 def pair_up(round_num, tournament_id, seeded_player_list):
-    skip = 0
-    saved_player = -1
-    for player in seeded_player_list:
+    for player in range(0,len(seeded_player_list),2):
         #print(unseed(tournament_id, player))
-        if skip == 0:
-            skip = 1
-            saved_player = unseed(tournament_id, player)
-        else:
-            new_match(round_num, tournament_id, saved_player, unseed(tournament_id, player))
-            skip = 0
+        new_match(round_num, tournament_id, unseed(tournament_id, seeded_player_list[player]), unseed(tournament_id, seeded_player_list[::-1][player]))
+
+def pair_up_unseeded(round_num, tournament_id, player_list):
+    for player in range(0,len(player_list),2):
+        #print(unseed(tournament_id, player))
+        new_match(round_num, tournament_id, player_list[player], player_list[::-1][player])
             
 def display_unfinished():
     search("SELECT * FROM tournaments WHERE winner_id IS NULL;", None)
@@ -159,9 +190,9 @@ def print_pairings(round_num, tournament):
     msg = search("SELECT * FROM matches WHERE round = %s AND id = %s;", (round_num, tournament))
     for match in msg:
         player_1 = find_name(match[3])
-        player_1 = "#" + str(player_1[0]) + " " + str(player_1[1]) + " " + str(player_1[2])
+        player_1 = "#" + str(match[3]) + " " + player_1
         player_2 = find_name(match[4])
-        player_2 = "#" + str(player_2[0]) + " " + str(player_2[1]) + " " + str(player_2[2])
+        player_2 = "#" + str(match[4]) + " " + player_2
         print(player_1 + " VS " + player_2)
     
 def increment_round(tournament_id):
@@ -171,9 +202,47 @@ def increment_round(tournament_id):
         do_execute("UPDATE tournaments SET tournament_round = %s WHERE tournament_id = %s;",(round, tournament_id))
     else:
         print("tournament does not exist")
-        
-    
-    
+
+def single_elim(tournament_name, tournament_date, player_list):
+    print("Starting new tournament: \n")
+    print(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date)) != None)
+    if(search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))!= []):
+        print("Tournament with the same name was already created today, please try another name")
+        return -1
+    #makes new tournament table entry
+    do_execute("INSERT INTO tournaments (tournament_name, tournament_date, tournament_round) VALUES (%s, %s, 1)",(tournament_name, tournament_date))
+    tournament_id = search("SELECT tournament_id FROM tournaments WHERE tournament_name = %s and tournament_date = %s",(tournament_name, tournament_date))[0][0]
+    seeded_list = []
+    seed = 0
+    print(player_list)
+    for i in player_list:
+        seed = seed + 1
+        seeded_list.append(seed)
+        check_out(i[0])
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, i[0], seed))
+    #assign seeds for convenience
+    if len(seeded_list) % 2 != 0:
+        do_execute("INSERT INTO seeding (tournament_id, player_id, seed) VALUES (%s, %s, %s)",(tournament_id, 1, seed))
+    pair_up(1, tournament_id, seeded_list)
+        #unseed the list to make player_list
+def continue_single_elim(round_num, tournament_id):
+    if search("SELECT id FROM matches WHERE complete = false AND round = %s AND id = %s;",(round_num, tournament_id)) != []:
+        print("Previous round has not been completed, please report all matches")
+        return -1
+    player_list = []
+    for match in search("SELECT player1_id, player2_id, player1_wins, player1_losses, player1_draws FROM matches WHERE round = %s and id = %s;",(str(round_num),str(tournament_id))):
+        if match[2] > match[3]:
+            player_list.append(match[0])
+        elif match[2] == match[3]:
+            print("please determine a winner to advance, then call again")
+            return -1
+        else:
+            player_list.append(match[1])
+    if(len(player_list) == 1):
+        crown_winner(player_list[0], tournament_id)
+        print("congratulations " +  find_name(player_list[0]) + " on a first place finish!")
+    pair_up_unseeded(round_num = round_num+1, tournament_id = tournament_id, player_list = player_list)
+    increment_round(tournament_id = tournament_id)
 def crown_winner(winner_id, tournament_id):
     do_execute("UPDATE tournaments SET winner_id = %s WHERE tournament_id = %s", (winner_id, tournament_id))
     
