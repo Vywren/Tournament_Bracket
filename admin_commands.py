@@ -1,4 +1,5 @@
 from psycopg2 import *
+#proof of concept, does not reflect final version
 #base functions to execute commands
 def do_execute(command, param):
     account =  open("account_information.txt","r")
@@ -187,6 +188,7 @@ def display_unfinished():
     search("SELECT * FROM tournaments WHERE winner_id IS NULL;", None)
     
 def print_pairings(round_num, tournament):
+    print("Starting round " + str(round_num))
     msg = search("SELECT * FROM matches WHERE round = %s AND id = %s;", (round_num, tournament))
     for match in msg:
         player_1 = find_name(match[3])
