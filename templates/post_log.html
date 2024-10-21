@@ -1,5 +1,12 @@
 {%extends "template.html"%}
 {%block label%}Registered{%endblock%}
-{%block title%}Welcome (back) {%endblock%}
 {%block content%}
-<p>Ready for your next tournament? Return to home and check in</p>{%endblock%}
+<p>Ready for your next tournament? Return to home and check in</p>
+{%with messages = get_flashed_messages()%}
+    {%if messages%}
+        {%for msg in messages%}
+            <c5>{{msg}}<c5>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
+{%endblock%}
