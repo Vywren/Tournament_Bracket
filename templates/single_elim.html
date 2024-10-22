@@ -2,6 +2,14 @@
 {%block label%}Single Elimination Rooms{%endblock%}
 {%block title%}Single Elimination Rooms{%endblock%}
 {%block content%}
+{%with messages = get_flashed_messages()%}
+    {%if messages%}
+        {%for msg in messages%}
+            <c5>{{msg}}<c5>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
 <h4>Tournament Room list:</h4>
-<button> Join room </button> 
+<button> Join Room </button> 
+<button> Create New Room </button> 
 {%endblock%}
