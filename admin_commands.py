@@ -50,6 +50,12 @@ def search_player(name):
     for i in msg:
         ids.append(i[0])
     return ids
+def search_player_full(first,last):
+    msg = search("SELECT * FROM players WHERE first_name = %s AND last_name = %s;",(str(first),str(last)))
+    ids = []
+    for i in msg:
+        ids.append(i[0])
+    return ids
 def find_name(id):
     msg = search("SELECT first_name, last_name FROM players WHERE user_id = %s;",(str(id),))
     return msg[0][0] + " " + msg[0][1]
