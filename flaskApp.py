@@ -23,19 +23,16 @@ class single_elim_room(Base):
 
 class users(Base):
     __tablename__ = 'users'
-    email = Column(String, primary_key = True)
-    username = Column(String)
+    username = Column(String, primary_key = True)
     in_room = Column(Integer, ForeignKey(single_elim_room.room_number))
-    def __init__(self, email, username, in_room):
-        self.email = email
+    def __init__(self, username, in_room):
         self.username = username
         self.in_room = in_room
     def __repr__(self):
-            return f"({self.email, self.username, self.in_room})"
+            return f"({self.username, self.in_room})"
 
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
-#sql_session.add(users(email = "dylan@gmail.com")) 
 results = sql_session.query(single_elim_room).filter(single_elim_room.room_number == 0).first()
 if results == None:
     sql_session.add(single_elim_room(room_number = 0)) 
@@ -55,7 +52,7 @@ def single_elim():
     if request.method == "POST":
         new = request.form.get("new_room")
         join = request.form.get("room_num")
-        if session["user"] == None or session["email"] == None:
+        if session["user"] == None:
             flash("Please login before joining a room")
             return redirect(url_for("login"))
         if new is not None:
@@ -84,25 +81,20 @@ def single_elim():
 @app.route("/login",methods = ["POST", "GET"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
         username = request.form["username"]
         if username == "":
             flash("please enter a username")
             return redirect(url_for("login"))
-        if email == "":
-            flash("please enter an email")
-            return redirect(url_for("login"))
-        results = sql_session.query(users).filter(users.email == email).first()  
-        session["email"] = email
+        results = sql_session.query(users).filter(users.username == username).first()  
         session["username"] = username
         if results != None:
-            flash("Email found, Welcome Back")
+            flash("User found, Welcome Back")
             flash (username)
             return redirect(url_for("post_log"))
             
         else:
-            flash("Email not found, new user created")
-            sql_session.add(users(email = email, username = username, in_room = 0))
+            flash("User not found, new user created")
+            sql_session.add(users(username = username, in_room = 0))
             sql_session.commit()
             return redirect(url_for("post_log"))
     else:
@@ -114,7 +106,7 @@ def waiting_room():
 
 @app.route("/login/post_log/")
 def post_log():
-    if "email" in session:
+    if "user" in session:
         return render_template('post_log.html')
     else:
         return redirect(url_for("login"))

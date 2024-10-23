@@ -3,17 +3,8 @@
 {%block title%}Split Second Tournaments Login{%endblock%}
 {%block content%}
 <form action = '#' method = 'post'>
-  <p> Email:</p>
-  <p><input type = 'text' name = 'email'/></p>
   <p> Username:</p>
   <p><input type = 'text' name = 'username'/></p>
   <p><input type = "submit" name = "sub"/> </p> 
 </form>
-{%with messages = get_flashed_messages()%}
-    {%if messages%}
-        {%for msg in messages%}
-            <c5>{{msg}}<c5>
-        {%endfor%}
-    {%endif%}
-{%endwith%}
 {%endblock%}
