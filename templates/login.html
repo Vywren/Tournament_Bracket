@@ -9,4 +9,11 @@
   <p><input type = 'text' name = 'username'/></p>
   <p><input type = "submit" name = "sub"/> </p> 
 </form>
+{%with messages = get_flashed_messages()%}
+    {%if messages%}
+        {%for msg in messages%}
+            <c5>{{msg}}<c5>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
 {%endblock%}

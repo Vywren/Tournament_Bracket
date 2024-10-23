@@ -1,2 +1,3 @@
 Tournament Bracket record using postgres sql and python
-Works through using commands in bracket_access.py, and data is stored locally. Will eventually go through an html and css website using flask
+flask and sqlalchemy backend with html and css frontend.
+Currently does not process tournaments but does have a working login and proof of concept for tournaments
