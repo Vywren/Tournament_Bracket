@@ -2,6 +2,13 @@
 {%block label%}Split Second Tournaments Login{%endblock%}
 {%block title%}Split Second Tournaments Login{%endblock%}
 {%block content%}
+{%with messages = get_flashed_messages()%}
+    {%if messages%}
+        {%for msg in messages%}
+            <c5>{{msg}}<c5>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
 <form action = '#' method = 'post'>
   <p> Username:</p>
   <p><input type = 'text' name = 'username'/></p>

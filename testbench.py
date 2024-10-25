@@ -34,6 +34,9 @@ class users(Base):
 # Create the example table 
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
+
+def find_user(username):
+    return sql_session.query(users).filter_by(username = username).first()
   
 sql_session.add(single_elim_room(room_number = 0, empty = True)) 
 sql_session.add(single_elim_room(room_number = 1, empty = True)) 
@@ -47,7 +50,11 @@ sql_session.add(users(username = "bob3",in_room = 0))
 sql_session.commit() 
 
 
-print(sql_session.get(users,"bob"))
+bob = sql_session.query(users).filter_by(username = "bob").all()
+for user in bob:
+    user.username = "devin"
+sql_session.commit()
+print(sql_session.query(users).filter_by(username = "devin").first())
 #results = sql_session.query(users).filter(users.in_room == 0).first() 
 #results1 = sql_session.query(single_elim_room).all()
 #results2 = sql_session.query(single_elim_room).filter(single_elim_room.room_number == 1).first()
