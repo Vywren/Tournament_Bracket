@@ -76,8 +76,8 @@ else:
 for result in results1:
     hold = result.room_number
     if hold == 1:
-        print(hold)
-print(__version__ )'''
+        print(hold)'''
+print(__version__ )
 # Insert some data into the example table 
 
   

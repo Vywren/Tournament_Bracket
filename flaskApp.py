@@ -64,6 +64,8 @@ def single_elim(): #check for nonempty rooms to join
         if find_user(session["user"]) == None:
             flash("Please login before joining a room")
             return redirect(url_for("login"))
+        if join == "":
+            flash("please enter a room number")
         if new is not None:
             #new room button was pressed
             greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True).first()
@@ -78,7 +80,7 @@ def single_elim(): #check for nonempty rooms to join
             #too many rooms added
                 flash("All rooms in use")
                 return render_template("single_elim.html")
-        if join > 0 and join <= 10:
+        if int(join) > 0 and int(join) <= 10:
             #add user to room
             rooms = sql_session.query(single_elim_room).filter(single_elim_room.empty == False and single_elim_room.room_number > 0).all()
             for room in rooms:
