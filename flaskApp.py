@@ -38,8 +38,12 @@ class users(Base):
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
 
-def find_user(username):
+def find_user(username): #returns the object for the user with this username, username is unique so accidentally skipping someone shouldn't be an issue
     return sql_session.query(users).filter_by(username = username).first()
+
+def find_all_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
+    return sql_session.query(users).filter_by(in_room = room_number).all()
+
 
 for i in range(10):
     sql_session.add(single_elim_room(room_number = i, empty = True)) 
@@ -64,15 +68,15 @@ def single_elim(): #check for nonempty rooms to join
         if find_user(session["user"]) == None:
             flash("Please login before joining a room")
             return redirect(url_for("login"))
-        if join == "":
+        if join == "" and new == "":
             flash("please enter a room number")
         if new is not None:
             #new room button was pressed
-            greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True).first()
+            greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True, single_elim_room.room_number!= 0).first()
             if greatest != None: #succesfully created new room
                 greatest.empty = False
                 use = find_user(session["user"])
-                use.in_room = join
+                use.in_room = greatest.room_number
                 sql_session.commit()
                 flash("Welcome to room "+ str(greatest.room_number))
                 return redirect(url_for("waiting_room"))
@@ -80,7 +84,7 @@ def single_elim(): #check for nonempty rooms to join
             #too many rooms added
                 flash("All rooms in use")
                 return render_template("single_elim.html")
-        if int(join) > 0 and int(join) <= 10:
+        if join.isdigit() and join != "0":
             #add user to room
             rooms = sql_session.query(single_elim_room).filter(single_elim_room.empty == False and single_elim_room.room_number > 0).all()
             for room in rooms:
@@ -94,6 +98,9 @@ def single_elim(): #check for nonempty rooms to join
             else:            
                 flash("This is not an existing room")
                 return redirect(url_for("single_elim"))
+        else:
+            flash("This is not an existing room")
+            return redirect(url_for("single_elim"))
     return render_template("single_elim.html")
 @app.route("/login",methods = ["POST", "GET"])
 def login():
@@ -119,12 +126,16 @@ def login():
     
 @app.route("/single_elim/waiting_room")
 def waiting_room():
+    if session["room"] == '0': #check if user is in a room
+        return redirect(url_for("single_elim"))
+    for i in find_all_in_room(session["room"]):
+        flash(i.username + "\n")
     return render_template('waiting_room.html')
 
 @app.route("/login/post_log/")
 def post_log():
     if "user" in session:
-        return render_template('post_log.html')
+        return redirect(url_for("single_elim"))
     else:
         return redirect(url_for("login"))
 if __name__ == "__main__":

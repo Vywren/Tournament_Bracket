@@ -180,6 +180,7 @@ def quick_tournament_bracket(tournament_name, tournament_date):
         
 def advance_quick_tournament(round_num):
     print("go to next")
+    
 def pair_up(round_num, tournament_id, seeded_player_list):
     for player in range(0,len(seeded_player_list),2):
         #print(unseed(tournament_id, player))
