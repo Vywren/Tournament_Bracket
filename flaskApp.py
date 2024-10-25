@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import sessionmaker 
 from sqlalchemy.ext.declarative import declarative_base 
 
@@ -16,8 +16,10 @@ Base = declarative_base()
 class single_elim_room(Base):
     __tablename__ = 'single_elim_room'
     room_number = Column(Integer, primary_key = True)
-    def __init__(self, room_number):
+    empty = Column(Boolean)
+    def __init__(self, room_number,empty):
         self.room_number = room_number
+        self.empty = empty
     def __repr__(self):
             return f"{self.room_number}"
 
@@ -30,12 +32,17 @@ class users(Base):
         self.in_room = in_room
     def __repr__(self):
             return f"({self.username, self.in_room})"
+        
+
 
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
-results = sql_session.query(single_elim_room).filter(single_elim_room.room_number == 0).first()
-if results == None:
-    sql_session.add(single_elim_room(room_number = 0)) 
+
+def find_user(username):
+    return sql_session.query(users).filter_by(username = username).first()
+
+for i in range(10):
+    sql_session.add(single_elim_room(room_number = i, empty = True)) 
 sql_session.commit()
 
 
@@ -45,34 +52,42 @@ def do_stuff():
     return render_template('index.html')
 
 @app.route("/single_elim", methods = ["POST", "GET"])
-def single_elim():
-    results = sql_session.query(single_elim_room).filter(single_elim_room.room_number > 0).all()
+def single_elim(): #check for nonempty rooms to join
+    results = sql_session.query(single_elim_room).filter(single_elim_room.empty == False).all()
     for result in results:
         flash(str(result))
+        #if buttons are pressed
     if request.method == "POST":
         new = request.form.get("new_room")
         join = request.form.get("room_num")
-        if session["user"] == None:
+        #check if user is logged in
+        if find_user(session["user"]) == None:
             flash("Please login before joining a room")
             return redirect(url_for("login"))
         if new is not None:
             #new room button was pressed
-            greatest = sql_session.query(single_elim_room).count()
-            if greatest <= 10:
-                 sql_session.add(single_elim_room(room_number = greatest)) 
-                 sql_session.commit()
-                 flash("welcome to room "+ str(greatest))
-                 return redirect(url_for("waiting_room"))
+            greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True).first()
+            if greatest != None: #succesfully created new room
+                greatest.empty = False
+                use = find_user(session["user"])
+                use.in_room = join
+                sql_session.commit()
+                flash("Welcome to room "+ str(greatest.room_number))
+                return redirect(url_for("waiting_room"))
             else:
             #too many rooms added
+                flash("All rooms in use")
                 return render_template("single_elim.html")
-        if join.isnumeric():
+        if join > 0 and join <= 10:
             #add user to room
-            rooms = sql_session.query(single_elim_room).all()
+            rooms = sql_session.query(single_elim_room).filter(single_elim_room.empty == False and single_elim_room.room_number > 0).all()
             for room in rooms:
-                if int(join) == int(room.room_number):
+                if int(join) == int(room.room_number): #sucessfully joined room
                     session["room"] = join
-                    flash("welcome to room " + join)
+                    use = find_user(session["user"])
+                    use.in_room = join
+                    sql_session.commit()
+                    flash("welcome to room " + join + " " + use.username)
                     return redirect(url_for("waiting_room"))
             else:            
                 flash("This is not an existing room")
@@ -85,8 +100,8 @@ def login():
         if username == "":
             flash("please enter a username")
             return redirect(url_for("login"))
-        results = sql_session.query(users).filter(users.username == username).first()  
-        session["username"] = username
+        results = find_user(username)
+        session["user"] = username
         if results != None:
             flash("User found, Welcome Back")
             flash (username)
