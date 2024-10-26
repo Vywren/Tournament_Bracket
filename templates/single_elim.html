@@ -4,7 +4,14 @@
 {%block content%}
 
 <h4>Tournament Room list:</h4>
-{%with messages = get_flashed_messages()%}
+{%with messages = get_flashed_messages(category_filter = ["room_display"])%}
+    {%if messages%}
+        {%for msg in messages%}
+            <p>{{msg}} </p>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
+{%with messages = get_flashed_messages(category_filter = ["joining_issues"])%}
     {%if messages%}
         {%for msg in messages%}
             <p>{{msg}} </p>

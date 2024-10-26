@@ -2,7 +2,7 @@
 {%block label%}Split Second Tournaments Login{%endblock%}
 {%block title%}Split Second Tournaments Login{%endblock%}
 {%block content%}
-{%with messages = get_flashed_messages()%}
+{%with messages = get_flashed_messages(category_filter = "no_login")%}
     {%if messages%}
         {%for msg in messages%}
             <c5>{{msg}}<c5>
