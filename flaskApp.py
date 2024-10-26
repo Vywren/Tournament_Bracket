@@ -59,17 +59,17 @@ def do_stuff():
 def single_elim(): #check for nonempty rooms to join
     results = sql_session.query(single_elim_room).filter(single_elim_room.empty == False).all()
     for result in results:
-        flash(str(result))
+        flash(str(result),"room_display")
         #if buttons are pressed
     if request.method == "POST":
         new = request.form.get("new_room")
         join = request.form.get("room_num")
         #check if user is logged in
         if find_user(session["user"]) == None:
-            flash("Please login before joining a room")
+            flash("Please login before joining a room","no_login")
             return redirect(url_for("login"))
         if join == "" and new == "":
-            flash("please enter a room number")
+            flash("please enter a room number","joining_issues")
         if new is not None:
             #new room button was pressed
             greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True, single_elim_room.room_number!= 0).first()
@@ -78,11 +78,12 @@ def single_elim(): #check for nonempty rooms to join
                 use = find_user(session["user"])
                 use.in_room = greatest.room_number
                 sql_session.commit()
-                flash("Welcome to room "+ str(greatest.room_number))
+                session["room"] = greatest.room_number
+                flash("Welcome to room "+ str(greatest.room_number) + " " + use.username,"welcome")
                 return redirect(url_for("waiting_room"))
             else:
             #too many rooms added
-                flash("All rooms in use")
+                flash("All rooms in use","joining_issues")
                 return render_template("single_elim.html")
         if join.isdigit() and join != "0":
             #add user to room
@@ -93,33 +94,35 @@ def single_elim(): #check for nonempty rooms to join
                     use = find_user(session["user"])
                     use.in_room = join
                     sql_session.commit()
-                    flash("welcome to room " + join + " " + use.username)
+                    flash("welcome to room " + join + " " + use.username,"welcome")
                     return redirect(url_for("waiting_room"))
             else:            
-                flash("This is not an existing room")
-                return redirect(url_for("single_elim"))
+                flash("This is not an existing room","joining_issues")
+                return render_template("single_elim.html")
         else:
-            flash("This is not an existing room")
-            return redirect(url_for("single_elim"))
+            flash("This is not an existing room","joining_issues")
+            return render_template("single_elim.html") 
     return render_template("single_elim.html")
 @app.route("/login",methods = ["POST", "GET"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
         if username == "":
-            flash("please enter a username")
+            flash("please enter a username", "no_login")
             return redirect(url_for("login"))
         results = find_user(username)
         session["user"] = username
         if results != None:
-            flash("User found, Welcome Back")
+            flash("User found, Welcome Back","logged_in")
             flash (username)
+            session["room"] = find_user(username).in_room
             return redirect(url_for("post_log"))
             
         else:
-            flash("User not found, new user created")
+            flash("User not found, new user created","logged_in")
             sql_session.add(users(username = username, in_room = 0))
             sql_session.commit()
+            session["room"] = '0'
             return redirect(url_for("post_log"))
     else:
         return render_template('login.html')
@@ -128,8 +131,8 @@ def login():
 def waiting_room():
     if session["room"] == '0': #check if user is in a room
         return redirect(url_for("single_elim"))
-    for i in find_all_in_room(session["room"]):
-        flash(i.username + "\n")
+    for i in find_all_in_room(session["room"]):#display all players in room
+        flash(i.username + "\n","player_list")
     return render_template('waiting_room.html')
 
 @app.route("/login/post_log/")

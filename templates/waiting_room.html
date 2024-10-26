@@ -2,8 +2,15 @@
 {%block label%}Tournament Waiting Room{%endblock%}
 {%block title%}Tournament Waiting Room{%endblock%}
 {%block content%}
-<h1> Player List </h1>
-{%with messages = get_flashed_messages()%}
+{%with messages = get_flashed_messages(category_filter = ["welcome"])%}
+    {%if messages%}
+        {%for msg in messages%}
+            <p>{{msg}} </p>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
+<h5> Player List: </h5>
+{%with messages = get_flashed_messages(category_filter = ["player_list"])%}
     {%if messages%}
         {%for msg in messages%}
             <p>{{msg}} </p>

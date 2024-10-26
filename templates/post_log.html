@@ -2,7 +2,7 @@
 {%block label%}Registered{%endblock%}
 {%block content%}
 <p>Ready for your next tournament? Return to home and check in</p>
-{%with messages = get_flashed_messages()%}
+{%with messages = get_flashed_messages(category_filter = "logged_in")%}
     {%if messages%}
         {%for msg in messages%}
             <c5>{{msg}}<c5>
