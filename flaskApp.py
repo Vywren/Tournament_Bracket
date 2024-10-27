@@ -13,25 +13,38 @@ Session = sessionmaker(bind=engine)
 sql_session = Session() 
 Base = declarative_base()
 
+class admin(Base):
+    __tablename__ = 'admin'
+    admin = Column(String)
+    room_number = Column(Integer, primary_key = True)
+    password = Column(String)
+    def __init__(self, admin,room_number,password):
+        self.room_number = room_number
+        self.admin = admin
+        self.password = password
 class single_elim_room(Base):
     __tablename__ = 'single_elim_room'
     room_number = Column(Integer, primary_key = True)
     empty = Column(Boolean)
+    room_admin = Column(String, ForeignKey(admin.admin))
     def __init__(self, room_number,empty):
         self.room_number = room_number
         self.empty = empty
+        
     def __repr__(self):
             return f"{self.room_number}"
 
 class users(Base):
     __tablename__ = 'users'
     username = Column(String, primary_key = True)
-    in_room = Column(Integer, ForeignKey(single_elim_room.room_number))
-    def __init__(self, username, in_room):
+    in_room = Column(Integer, ForeignKey(admin.room_number))
+    ready = Column(Boolean)
+    def __init__(self, username, in_room, ready):
         self.username = username
         self.in_room = in_room
+        self.ready = ready
     def __repr__(self):
-            return f"({self.username, self.in_room})"
+            return f"({self.username, self.in_room, self.ready})"
         
 
 
@@ -44,7 +57,14 @@ def find_user(username): #returns the object for the user with this username, us
 def find_all_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
     return sql_session.query(users).filter_by(in_room = room_number).all()
 
+def assign_admin(username,room_number, password = ""):
+    sql_session.add(admin(room_number = room_number, admin = username, password = password)) 
+    sql_session.commit()
 
+def create_new_user(username):
+    sql_session.add(users(username = username, in_room = 0, ready = False))
+    sql_session.commit()
+    
 for i in range(10):
     sql_session.add(single_elim_room(room_number = i, empty = True)) 
 sql_session.commit()
@@ -56,7 +76,7 @@ def do_stuff():
     return render_template('index.html')
 
 @app.route("/single_elim", methods = ["POST", "GET"])
-def single_elim(): #check for nonempty rooms to join
+def single_elim(): #display all available rooms
     results = sql_session.query(single_elim_room).filter(single_elim_room.empty == False).all()
     for result in results:
         flash(str(result),"room_display")
@@ -71,13 +91,14 @@ def single_elim(): #check for nonempty rooms to join
         if join == "" and new == "":
             flash("please enter a room number","joining_issues")
         if new is not None:
-            #new room button was pressed
+            #create room button was pressed, find the first empty room
             greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True, single_elim_room.room_number!= 0).first()
             if greatest != None: #succesfully created new room
                 greatest.empty = False
                 use = find_user(session["user"])
                 use.in_room = greatest.room_number
                 sql_session.commit()
+                assign_admin(username = use.username,room_number = use.in_room)
                 session["room"] = greatest.room_number
                 flash("Welcome to room "+ str(greatest.room_number) + " " + use.username,"welcome")
                 return redirect(url_for("waiting_room"))
@@ -103,6 +124,7 @@ def single_elim(): #check for nonempty rooms to join
             flash("This is not an existing room","joining_issues")
             return render_template("single_elim.html") 
     return render_template("single_elim.html")
+
 @app.route("/login",methods = ["POST", "GET"])
 def login():
     if request.method == "POST":
@@ -120,21 +142,28 @@ def login():
             
         else:
             flash("User not found, new user created","logged_in")
-            sql_session.add(users(username = username, in_room = 0))
-            sql_session.commit()
+            create_new_user(username = username)
+            
             session["room"] = '0'
             return redirect(url_for("post_log"))
     else:
         return render_template('login.html')
     
-@app.route("/single_elim/waiting_room")
+@app.route("/single_elim/waiting_room",methods = ["POST", "GET"])
 def waiting_room():
     if session["room"] == '0': #check if user is in a room
         return redirect(url_for("single_elim"))
+    if request.method == "POST":
+        ready = request.form["ready"]
+        if ready:
+            find_user(session["user"]).ready = True
+            sql_session.commit()
+            #todo: if user is admin, begin pairing players
     for i in find_all_in_room(session["room"]):#display all players in room
         flash(i.username + "\n","player_list")
     return render_template('waiting_room.html')
 
+#may be scrapped later
 @app.route("/login/post_log/")
 def post_log():
     if "user" in session:
