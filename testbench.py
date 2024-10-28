@@ -18,36 +18,23 @@ class admin(Base):
     admin = Column(String)
     room_number = Column(Integer, primary_key = True)
     password = Column(String)
-    def __init__(self, admin,room_number,password):
-        self.room_number = room_number
-        self.admin = admin
-        self.password = password
+
 class single_elim_room(Base):
     __tablename__ = 'single_elim_room'
     room_number = Column(Integer, primary_key = True) #room id
-    empty = Column(Boolean) #is the room empty/displayable?
+    empty = Column(Boolean) #is the room empty/undisplayable?
     room_admin = Column(String, ForeignKey(admin.admin)) #who manages the room?
     start = Column(Boolean) #have the first pairings been made?
     time = Column(String, nullable = False)
-    def __init__(self, room_number,empty,start, time):
-        self.room_number = room_number
-        self.empty = empty
-        self.start = start
-        self.time = time
-    def __repr__(self):
-            return f"{self.room_number}"
+    round = Column(Integer, nullable = False)
+
 
 class users(Base):
     __tablename__ = 'users'
     username = Column(String, primary_key = True)
     in_room = Column(Integer, ForeignKey(admin.room_number))
     ready = Column(Boolean)
-    def __init__(self, username, in_room, ready):
-        self.username = username
-        self.in_room = in_room
-        self.ready = ready
-    def __repr__(self):
-            return f"({self.username, self.in_room, self.ready})"
+
         
 class matches(Base):
     __tablename__ = 'matches'
@@ -56,16 +43,9 @@ class matches(Base):
     p1_wins = Column(Integer)
     p1_losses = Column(Integer)
     draws = Column(Integer)
-    identifier = Column(String, primary_key = True)
-    def __init__(self, player1,player2, p1_wins, p1_losses, draws,identifier):
-        self.player1 = player1
-        self.player2 = player2
-        self.p1_wins = p1_wins
-        self.p1_losses = p1_losses
-        self.draws = draws
-        identifier = identifier
-    def __repr__(self):
-            return f"({self.username, self.in_room, self.ready})"
+    id = Column(Integer,primary_key = True, autoincrement=True)
+    tt_identifier = Column(String, nullable=False)
+
 
 # Create the example table 
 Base.metadata.drop_all(engine) 
@@ -91,16 +71,39 @@ def find_room(room_num):
             return i
     return -1
 
+def initial_pair_up(room_num):
+    room = find_room(room_num)
+    players = find_all_in_room(room_num)
+    if players == None or room == None:
+        print("issue")
+        return -1
+    count = len(players)
+    for player in range(0,count-1,2):
+        tt_id = str(room.room_number)+"/"+ str(room.round) + "/" + room.time
+        sql_session.add(matches(player1 = players[player].username, player2 = players[player+1].username, p1_wins = 0, p1_losses = 0, draws = 0, tt_identifier = tt_id))
+    sql_session.commit()
+    return 1
+
 for i in range(10):
-    sql_session.add(single_elim_room(room_number = i, empty = True,start = False, time = "0")) 
+    sql_session.add(single_elim_room(room_number = i, empty = True,start = False, time = "0", round = "0")) 
 sql_session.commit()
 
 create_new_user("bob1")
 create_new_user("bob2")
 create_new_user("bob3")
+create_new_user("bob4")
+create_new_user("bob5")
+create_new_user("bob6")
+find_user("bob1").in_room = 1
+find_user("bob2").in_room = 1
+find_user("bob3").in_room = 1
+find_user("bob4").in_room = 1
+find_user("bob5").in_room = 1
+find_user("bob6").in_room = 1
 room = find_room(1)
 if room.start != True:
     print("hello")
     room.start = True
     room.time = datetime.datetime.now()
     sql_session.commit()
+initial_pair_up(1)
