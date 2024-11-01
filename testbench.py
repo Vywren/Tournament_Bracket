@@ -31,10 +31,11 @@ class single_elim_room(Base):
 
 class users(Base):
     __tablename__ = 'users'
-    username = Column(String, primary_key = True)
+    username = Column(String, unique = True)
     in_room = Column(Integer, ForeignKey(admin.room_number))
     ready = Column(Boolean)
     dropped = Column(Boolean)
+    id = Column(Integer, primary_key = True)
 
         
 class matches(Base):
@@ -57,8 +58,8 @@ Base.metadata.create_all(engine)
 def find_user(username): #returns the object for the user with this username, username is unique so accidentally skipping someone shouldn't be an issue
     return sql_session.query(users).filter_by(username = username).first()
 
-def find_all_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
-    return sql_session.query(users).filter_by(in_room = room_number, dropped = False).all()
+def find_players_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
+    return sql_session.query(users).filter_by(in_room = room_number, dropped = False).order_by(users.id).all()
 
 def assign_admin(username,room_number, password = ""):
     sql_session.add(admin(room_number = room_number, admin = username, password = password)) 
@@ -69,14 +70,12 @@ def create_new_user(username):
     sql_session.commit()
     
 def find_room(room_num):
-    for i in sql_session.query(single_elim_room).all():
-        if i.room_number == room_num:
-            return i
-    return -1
+    return sql_session.query(single_elim_room).filter_by(room_number = room_num).first()
+
 
 def pair_up(room_num):
     room = find_room(room_num)
-    players = find_all_in_room(room_num)
+    players = find_players_in_room(room_num)
     if players == None or room == None:
         print("issue")
         return -1
