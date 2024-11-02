@@ -50,7 +50,8 @@ class matches(Base):
     room = Column(Integer, ForeignKey(single_elim_room.room_number))
     loser = Column(String, ForeignKey(users.username))
 
-
+def find_room_admin(room_number):
+    return sql_session.query(admin).filter_by(room_number = room_number).first()
 # Create the example table 
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
@@ -145,6 +146,7 @@ create_new_user("bob3")
 create_new_user("bob4")
 create_new_user("bob5")
 create_new_user("bob6")
+assign_admin("bob1",1)
 find_user("bob1").in_room = 1 
 find_user("bob2").in_room = 1
 find_user("bob3").in_room = 1
@@ -152,6 +154,7 @@ find_user("bob4").in_room = 1
 find_user("bob5").in_room = 1
 find_user("bob6").in_room = 1
 room = find_room(1)
+print(find_room_admin)
 if room.start != True:
     print("hello")
     room.start = True

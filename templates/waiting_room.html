@@ -12,6 +12,11 @@
 <form action = '#' method = 'post'>
     <button type="submit" name = "ready">Ready to play</button>
 </form>
+{% if session["room"] in session["admin_of"] %}
+<form action = '#' method = 'post'>
+    <button type = "submit" name = "start_tourney">Start Tournament</button>
+</form>
+{% endif %}
 <h5> Player List: </h5>
 {%with messages = get_flashed_messages(category_filter = ["player_list"])%}
     {%if messages%}

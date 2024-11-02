@@ -55,6 +55,7 @@ class matches(Base):
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
 
+
 def find_user(username): #returns the object for the user with this username, username is unique so accidentally skipping someone shouldn't be an issue
     return sql_session.query(users).filter_by(username = username).first()
 
@@ -65,6 +66,8 @@ def assign_admin(username,room_number, password = ""):
     sql_session.add(admin(room_number = room_number, admin = username, password = password)) 
     sql_session.commit()
 
+def find_room_admin(room_number):
+    return sql_session.query(admin).filter_by(room_number = room_number).first()
 def create_new_user(username):
     sql_session.add(users(username = username, in_room = 0, ready = False, dropped = False))
     sql_session.commit()
@@ -135,9 +138,9 @@ def advance_round(room):
     pair_up(room.room_number)
     
 def fields_full():
-    if session["user"] == None or session["room"] == None:
-        return False
-    return True
+    if "user" in session and "room" in session:
+        return True
+    return False
     
 
 for i in range(10):
@@ -158,7 +161,7 @@ def single_elim(): #display all available rooms
         #if buttons are pressed
     if request.method == "POST":
         new = request.form.get("new_room")
-        join = request.form.get("room_num")
+        join = request.form.get("room_num") # TODO: check how to isolate buttons, both buttons are probably submitting the same field
         #check if user is logged in
         if find_user(session["user"]) == None:
             flash("Please login before joining a room","no_login")
@@ -167,15 +170,19 @@ def single_elim(): #display all available rooms
             flash("please enter a room number","joining_issues")
         if new is not None:
             #create room button was pressed, find the first empty room
-            greatest = sql_session.query(single_elim_room).filter(single_elim_room.empty == True, single_elim_room.room_number!= 0).first()
-            if greatest != None: #succesfully created new room
-                greatest.empty = False
+            room = sql_session.query(single_elim_room).filter(single_elim_room.empty == True, single_elim_room.room_number!= 0).first()
+            if room != None: #succesfully created new room
+                room.empty = False
                 use = find_user(session["user"])
-                use.in_room = greatest.room_number
+                use.in_room = room.room_number
+                room.time = datetime.datetime.now()
                 sql_session.commit()
                 assign_admin(username = use.username,room_number = use.in_room)
-                session["room"] = greatest.room_number
-                flash("Welcome to room "+ str(greatest.room_number) + " " + use.username,"welcome")
+                session["room"] = room.room_number
+                if "admin_of" not in session:
+                    session["admin_of"] = []
+                session["admin_of"].append(room.room_number)
+                flash("Welcome to room "+ str(room.room_number) + " " + use.username,"welcome")
                 return redirect(url_for("waiting_room"))
             else:
             #too many rooms added
@@ -203,7 +210,7 @@ def single_elim(): #display all available rooms
 @app.route("/login",methods = ["POST", "GET"])
 def login():
     if request.method == "POST":
-        username = request.form["username"]
+        username = request.form.get("username")
         if username == "":
             flash("please enter a username", "no_login")
             return redirect(url_for("login"))
@@ -219,26 +226,30 @@ def login():
             flash("User not found, new user created","logged_in")
             create_new_user(username = username)
             
-            session["room"] = '0'
+            session["room"] = 0
             return redirect(url_for("post_log"))
     else:
         return render_template('login.html')
     
 @app.route("/single_elim/waiting_room",methods = ["POST", "GET"])
 def waiting_room():
+    room = find_room(session["room"])
     if not fields_full(): #check if user is in a room
         return redirect(url_for("single_elim"))
+    
     if request.method == "POST":
-        ready = request.form["ready"]
+        ready = request.form.get("ready")
+        start = request.form.get("start_tourney")
         if ready != None:
             find_user(session["user"]).ready = True
             sql_session.commit()
-            room = find_room(session["room"])
+        if start != None:
+            pair_up(session["room"])
             if room.start != True:
                 room.start = True
-                room.time = datetime.datetime.now()
-                sql_session.commit()
-            #todo: if user is admin, begin pairing players
+            
+
+            
     for i in find_players_in_room(session["room"]):#display all players in room
         flash(i.username + "\n","player_list")
     return render_template('waiting_room.html')
@@ -247,8 +258,14 @@ def waiting_room():
 @app.route("/login/post_log/")
 def post_log():
     if "user" in session:
-        return redirect(url_for("single_elim"))
+        if session["room"] != 0:
+            return redirect(url_for("waiting_room"))
+        else:
+            return redirect(url_for("single_elim"))
     else:
         return redirect(url_for("login"))
 if __name__ == "__main__":
     app.run(debug = True)
+'''
+if room.start != True:
+                room.start = True'''
