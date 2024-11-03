@@ -31,10 +31,11 @@ class single_elim_room(Base):
 
 class users(Base):
     __tablename__ = 'users'
-    username = Column(String, primary_key = True)
+    username = Column(String, unique = True)
     in_room = Column(Integer, ForeignKey(admin.room_number))
     ready = Column(Boolean)
     dropped = Column(Boolean)
+    id = Column(Integer, primary_key = True)
 
         
 class matches(Base):
@@ -49,7 +50,8 @@ class matches(Base):
     room = Column(Integer, ForeignKey(single_elim_room.room_number))
     loser = Column(String, ForeignKey(users.username))
 
-
+def find_room_admin(room_number):
+    return sql_session.query(admin).filter_by(room_number = room_number).first()
 # Create the example table 
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
@@ -57,8 +59,8 @@ Base.metadata.create_all(engine)
 def find_user(username): #returns the object for the user with this username, username is unique so accidentally skipping someone shouldn't be an issue
     return sql_session.query(users).filter_by(username = username).first()
 
-def find_all_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
-    return sql_session.query(users).filter_by(in_room = room_number, dropped = False).all()
+def find_players_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
+    return sql_session.query(users).filter_by(in_room = room_number, dropped = False).order_by(users.id).all()
 
 def assign_admin(username,room_number, password = ""):
     sql_session.add(admin(room_number = room_number, admin = username, password = password)) 
@@ -69,14 +71,12 @@ def create_new_user(username):
     sql_session.commit()
     
 def find_room(room_num):
-    for i in sql_session.query(single_elim_room).all():
-        if i.room_number == room_num:
-            return i
-    return -1
+    return sql_session.query(single_elim_room).filter_by(room_number = room_num).first()
+
 
 def pair_up(room_num):
     room = find_room(room_num)
-    players = find_all_in_room(room_num)
+    players = find_players_in_room(room_num)
     if players == None or room == None:
         print("issue")
         return -1
@@ -146,6 +146,7 @@ create_new_user("bob3")
 create_new_user("bob4")
 create_new_user("bob5")
 create_new_user("bob6")
+assign_admin("bob1",1)
 find_user("bob1").in_room = 1 
 find_user("bob2").in_room = 1
 find_user("bob3").in_room = 1
@@ -153,6 +154,7 @@ find_user("bob4").in_room = 1
 find_user("bob5").in_room = 1
 find_user("bob6").in_room = 1
 room = find_room(1)
+print(find_room_admin)
 if room.start != True:
     print("hello")
     room.start = True
