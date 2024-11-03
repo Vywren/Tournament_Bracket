@@ -7,6 +7,7 @@ import datetime
 
 app = Flask(__name__,template_folder = 'templates')
 app.secret_key = "dhtuisdhfu9 her79ry489fjiojf0298348idksmfoisn2rif9djf023hr8fdjf"
+app.permanent_session_lifetime = datetime.timedelta(days = 7)
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 engine = create_engine('sqlite:///example.db') 
@@ -137,6 +138,19 @@ def advance_round(room):
     sql_session.commit()
     pair_up(room.room_number)
     
+def display_pairings(room_number):
+    room = find_room(room_number)
+    matched = sql_session.query(matches).filter(
+    and_(
+        matches.round == room.round,
+        matches.time == room.time,
+        matches.room == room.room_number,
+    )
+    ).all()
+    flash("Round " + str(room.round) + " pairings:", "pairings")
+    for i in matched:
+        flash(i.player1 + " VS. " + i.player2, "pairings")
+
 def fields_full():
     if "user" in session and "room" in session:
         return True
@@ -209,7 +223,9 @@ def single_elim(): #display all available rooms
 
 @app.route("/login",methods = ["POST", "GET"])
 def login():
+   
     if request.method == "POST":
+        session.permanent = True
         username = request.form.get("username")
         if username == "":
             flash("please enter a username", "no_login")
@@ -244,14 +260,18 @@ def waiting_room():
             find_user(session["user"]).ready = True
             sql_session.commit()
         if start != None:
-            pair_up(session["room"])
             if room.start != True:
                 room.start = True
-            
-
+                room.round += 1
+                pair_up(session["room"])
+    
+    
             
     for i in find_players_in_room(session["room"]):#display all players in room
         flash(i.username + "\n","player_list")
+    if room.round != 0:
+        display_pairings(session["room"])
+    
     return render_template('waiting_room.html')
 
 #may be scrapped later

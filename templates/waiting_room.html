@@ -17,6 +17,14 @@
     <button type = "submit" name = "start_tourney">Start Tournament</button>
 </form>
 {% endif %}
+{%with messages = get_flashed_messages(category_filter = ["pairings"])%}
+    {%if messages%}
+        {%for msg in messages%}
+            <p>{{msg}} </p>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
+
 <h5> Player List: </h5>
 {%with messages = get_flashed_messages(category_filter = ["player_list"])%}
     {%if messages%}
