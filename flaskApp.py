@@ -235,13 +235,15 @@ def login():
         if results != None:
             flash("User found, Welcome Back","logged_in")
             flash (username)
-            session["room"] = find_user(username).in_room
+            user = find_user(username)
+            session["room"] = user.in_room
+            session["ready"] = user.ready
             return redirect(url_for("post_log"))
             
         else:
             flash("User not found, new user created","logged_in")
             create_new_user(username = username)
-            
+            session["readied"] = False
             session["room"] = 0
             return redirect(url_for("post_log"))
     else:
@@ -258,20 +260,18 @@ def waiting_room():
         start = request.form.get("start_tourney")
         if ready != None:
             find_user(session["user"]).ready = True
+            session["ready"] = True
             sql_session.commit()
         if start != None:
             if room.start != True:
                 room.start = True
                 room.round += 1
                 pair_up(session["room"])
-    
-    
-            
+
     for i in find_players_in_room(session["room"]):#display all players in room
         flash(i.username + "\n","player_list")
     if room.round != 0:
         display_pairings(session["room"])
-    
     return render_template('waiting_room.html')
 
 #may be scrapped later

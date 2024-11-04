@@ -17,6 +17,11 @@
     <button type = "submit" name = "start_tourney">Start Tournament</button>
 </form>
 {% endif %}
+{% if session["ready"] == True%}
+<form action = '#' method = 'post'>
+    <button type = "submit" name = "ready">Show ready</button>
+</form>
+{% endif %}
 {%with messages = get_flashed_messages(category_filter = ["pairings"])%}
     {%if messages%}
         {%for msg in messages%}
