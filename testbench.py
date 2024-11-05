@@ -110,13 +110,14 @@ def report(player, room_num, wins, losses):
     else:
         print("should not be happening")
         return -1
-    sql_session.commit()
+    
     if match.p1_wins > match.p1_losses:
         match.loser = match.player2
     elif match.p1_wins < match.p1_losses:
         match.loser = match.player1
     else:
         print("match was a draw, tie break")
+    sql_session.commit()
     return 1
     
 def advance_round(room):
@@ -135,7 +136,29 @@ def advance_round(room):
     sql_session.commit()
     pair_up(room.room_number)
     
-
+def in_match(username):
+    user = find_user(username)
+    room = find_room(user.in_room)
+    return sql_session.query(matches).filter(
+    and_(
+        matches.round == room.round,
+        matches.time == room.time,
+        matches.room == room.room_number,
+        or_(
+            matches.player1 == username,
+            matches.player2 == username
+        )
+    )
+    ).first()
+    
+def matches_finished(room):
+    room = find_room(room) 
+    return sql_session.query(matches).filter(
+        matches.round == room.round,
+        matches.time == room.time,
+        matches.room == room.room_number,
+        matches.loser == None).first()
+    
 for i in range(10):
     sql_session.add(single_elim_room(room_number = i, empty = True,start = False, time = "0", round = "0")) 
 sql_session.commit()
@@ -164,10 +187,13 @@ pair_up(1)
 report("bob2", 1, wins = 2, losses = 1)
 report("bob4", 1, wins = 1, losses = 2)
 report("bob6", 1, wins = 1, losses = 2)
-
-advance_round(1)
-report("bob2",1,wins = 2, losses = 1)
-advance_round(1)
-report("bob2",1,wins = 2, losses = 1)
-advance_round(1)
+print(matches_finished(1) == None)
+#print(in_match("bob2").id)
+#advance_round(1)
+#report("bob2",1,wins = 2, losses = 1)
+#print(in_match("bob2").id)
+#advance_round(1)
+#report("bob2",1,wins = 2, losses = 1)
+#print(in_match("bob2").id)
+#advance_round(1)
 

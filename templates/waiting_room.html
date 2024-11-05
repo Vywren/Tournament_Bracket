@@ -18,10 +18,15 @@
 </form>
 {% endif %}
 {% if session["ready"] == True%}
-<form action = '#' method = 'post'>
-    <button type = "submit" name = "ready">Show ready</button>
-</form>
+    <h1>READY</h1>
 {% endif %}
+{%with messages = get_flashed_messages(category_filter = ["winner"])%}
+    {%if messages%}
+        {%for msg in messages%}
+            <p>{{msg}} </p>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
 {%with messages = get_flashed_messages(category_filter = ["pairings"])%}
     {%if messages%}
         {%for msg in messages%}
@@ -29,6 +34,23 @@
         {%endfor%}
     {%endif%}
 {%endwith%}
+
+{%with messages = get_flashed_messages(category_filter = ["issues"])%}
+    {%if messages%}
+        {%for msg in messages%}
+            <p>{{msg}} </p>
+        {%endfor%}
+    {%endif%}
+{%endwith%}
+{% if session["p1"] != None and session["p2"] != None %}
+<form action = '#' method = 'post'>
+    <p> User Wins:</p>
+    <p><input type = 'text' name = 'wins'/></p>
+    <p> User Losses:</p>
+    <p><input type = 'text' name = 'losses'/></p>
+    <button type = "submit" name = "report">Report</button>
+</form>
+{% endif %}
 
 <h5> Player List: </h5>
 {%with messages = get_flashed_messages(category_filter = ["player_list"])%}

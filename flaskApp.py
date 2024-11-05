@@ -56,12 +56,34 @@ class matches(Base):
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
 
-
+def in_match(username):
+    user = find_user(username)
+    room = find_room(user.in_room)
+    return sql_session.query(matches).filter(
+    and_(
+        matches.round == room.round,
+        matches.time == room.time,
+        matches.room == room.room_number,
+        matches.loser == None,
+        or_(
+            matches.player1 == username,
+            matches.player2 == username
+        )
+    )
+    ).first()
+    
+def matches_finished(room):
+    room = find_room(room) 
+    return sql_session.query(matches).filter(
+        matches.round == room.round,
+        matches.time == room.time,
+        matches.room == room.room_number,
+        matches.loser == None).first() == None
 def find_user(username): #returns the object for the user with this username, username is unique so accidentally skipping someone shouldn't be an issue
     return sql_session.query(users).filter_by(username = username).first()
 
 def find_players_in_room(room_number): #returns all users in room as objects in a list, attributes are acessible as follows, list[x].attribute
-    return sql_session.query(users).filter_by(in_room = room_number, dropped = False).order_by(users.id).all()
+    return sql_session.query(users).filter_by(in_room = room_number, dropped = False, ready = True).order_by(users.id).all()
 
 def assign_admin(username,room_number, password = ""):
     sql_session.add(admin(room_number = room_number, admin = username, password = password)) 
@@ -85,7 +107,7 @@ def pair_up(room_num):
         return -1
     count = len(players)
     if count <= 1:
-        print(players[0].username + " is your champion")
+        flash(players[0].username + " is your champion","winner")
     for player in range(0,count-1,2):
         sql_session.add(matches(player1 = players[player].username, player2 = players[player+1].username, p1_wins = 0, p1_losses = 0, time = room.time, round = room.round, room = room.room_number, loser = None))
     sql_session.commit()
@@ -113,13 +135,14 @@ def report(player, room_num, wins, losses):
     else:
         print("should not be happening")
         return -1
-    sql_session.commit()
+    
     if match.p1_wins > match.p1_losses:
         match.loser = match.player2
     elif match.p1_wins < match.p1_losses:
         match.loser = match.player1
     else:
         print("match was a draw, tie break")
+    sql_session.commit()
     return 1
     
 def advance_round(room):
@@ -150,6 +173,7 @@ def display_pairings(room_number):
     flash("Round " + str(room.round) + " pairings:", "pairings")
     for i in matched:
         flash(i.player1 + " VS. " + i.player2, "pairings")
+
 
 def fields_full():
     if "user" in session and "room" in session:
@@ -243,7 +267,7 @@ def login():
         else:
             flash("User not found, new user created","logged_in")
             create_new_user(username = username)
-            session["readied"] = False
+            session["ready"] = False
             session["room"] = 0
             return redirect(url_for("post_log"))
     else:
@@ -251,27 +275,43 @@ def login():
     
 @app.route("/single_elim/waiting_room",methods = ["POST", "GET"])
 def waiting_room():
+    session["p1"] = None
+    session["p2"] = None
     room = find_room(session["room"])
     if not fields_full(): #check if user is in a room
         return redirect(url_for("single_elim"))
     
     if request.method == "POST":
+        user = find_user(session["user"])
         ready = request.form.get("ready")
         start = request.form.get("start_tourney")
+        wins = request.form.get("wins")
+        losses = request.form.get("losses")
+        reports = request.form.get("report")
         if ready != None:
-            find_user(session["user"]).ready = True
-            session["ready"] = True
+            user.ready = not user.ready
+            session["ready"] = user.ready
             sql_session.commit()
         if start != None:
             if room.start != True:
                 room.start = True
                 room.round += 1
                 pair_up(session["room"])
-
+        if reports != None:
+            if wins == None or losses == None or not wins.isdigit() or not losses.isdigit() or wins == losses:
+                flash("Please Fill both fields with a number / break any existing ties", "issues")
+                return redirect(url_for("waiting_room"))
+            report(user.username, room.room_number, int(wins), int(losses))
+            if matches_finished(room.room_number):
+                advance_round(room.room_number)
     for i in find_players_in_room(session["room"]):#display all players in room
         flash(i.username + "\n","player_list")
     if room.round != 0:
         display_pairings(session["room"])
+        player_match = in_match(session["user"])
+        if player_match != None:
+            session["p1"] = player_match.player1
+            session["p2"] = player_match.player2
     return render_template('waiting_room.html')
 
 #may be scrapped later
