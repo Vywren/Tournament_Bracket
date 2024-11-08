@@ -56,6 +56,23 @@ class matches(Base):
 Base.metadata.drop_all(engine) 
 Base.metadata.create_all(engine) 
 
+def reset(user_object):
+    user_object.ready = False
+    user_object.dropped = False
+    user_object.in_room = 0
+    sql_session.commit()
+    
+def empty_check(room_object):
+    room_num = room_object.room_number
+    check = sql_session.query(users).filter_by(in_room = room_num).first()
+    if check == None:
+        room_object.empty = True
+        room_object.start = False
+        room_object.round = 0
+        room_object.room_admin = None
+        sql_session.query(admin).filter_by(room_number = room_num).delete()
+
+        sql_session.commit()
 def in_match(username):
     user = find_user(username)
     room = find_room(user.in_room)
@@ -106,8 +123,7 @@ def pair_up(room_num):
         print("issue")
         return -1
     count = len(players)
-    if count <= 1:
-        flash(players[0].username + " is your champion","winner")
+
     for player in range(0,count-1,2):
         sql_session.add(matches(player1 = players[player].username, player2 = players[player+1].username, p1_wins = 0, p1_losses = 0, time = room.time, round = room.round, room = room.room_number, loser = None))
     sql_session.commit()
@@ -188,7 +204,7 @@ sql_session.commit()
 
 
 @app.route("/")
-def do_stuff():
+def home():
     return render_template('index.html')
 
 @app.route("/single_elim", methods = ["POST", "GET"])
@@ -217,9 +233,7 @@ def single_elim(): #display all available rooms
                 sql_session.commit()
                 assign_admin(username = use.username,room_number = use.in_room)
                 session["room"] = room.room_number
-                if "admin_of" not in session:
-                    session["admin_of"] = []
-                session["admin_of"].append(room.room_number)
+                session["admin_of"] = room.room_number
                 flash("Welcome to room "+ str(room.room_number) + " " + use.username,"welcome")
                 return redirect(url_for("waiting_room"))
             else:
@@ -262,6 +276,7 @@ def login():
             user = find_user(username)
             session["room"] = user.in_room
             session["ready"] = user.ready
+            session["admin_of"] = sql_session.query(admin).filter_by(admin = session["user"]).first().room_number
             return redirect(url_for("post_log"))
             
         else:
@@ -282,12 +297,17 @@ def waiting_room():
         return redirect(url_for("single_elim"))
     
     if request.method == "POST":
+        leave = request.form.get("leave")
         user = find_user(session["user"])
         ready = request.form.get("ready")
         start = request.form.get("start_tourney")
         wins = request.form.get("wins")
         losses = request.form.get("losses")
         reports = request.form.get("report")
+        if leave != None:
+            reset(user)
+            empty_check(room)
+            return redirect(url_for("home"))
         if ready != None:
             user.ready = not user.ready
             session["ready"] = user.ready
@@ -304,14 +324,22 @@ def waiting_room():
             report(user.username, room.room_number, int(wins), int(losses))
             if matches_finished(room.room_number):
                 advance_round(room.room_number)
-    for i in find_players_in_room(session["room"]):#display all players in room
-        flash(i.username + "\n","player_list")
-    if room.round != 0:
-        display_pairings(session["room"])
-        player_match = in_match(session["user"])
-        if player_match != None:
-            session["p1"] = player_match.player1
-            session["p2"] = player_match.player2
+    players = find_players_in_room(session["room"])
+    if players == None or room == None:
+        print("issue")
+        return -1
+    count = len(players)
+    if count == 1 and room.start == 1:
+        flash(players[0].username + " is your champion","winner")
+    else:
+        for i in players:#display all players in room
+            flash(i.username + "\n","player_list")
+        if room.round != 0:
+            display_pairings(session["room"])
+            player_match = in_match(session["user"])
+            if player_match != None:
+                session["p1"] = player_match.player1
+                session["p2"] = player_match.player2
     return render_template('waiting_room.html')
 
 #may be scrapped later

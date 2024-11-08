@@ -12,7 +12,7 @@
 <form action = '#' method = 'post'>
     <button type="submit" name = "ready">Ready to play</button>
 </form>
-{% if session["room"] in session["admin_of"] %}
+{% if session["room"] == session["admin_of"] %}
 <form action = '#' method = 'post'>
     <button type = "submit" name = "start_tourney">Start Tournament</button>
 </form>
@@ -60,5 +60,8 @@
         {%endfor%}
     {%endif%}
 {%endwith%}
-
+<form action = '#' method = 'post'>
+    <button type="submit" name = "leave">Leave Room</button>
+</form>
 {%endblock%}
+
