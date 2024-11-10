@@ -2,12 +2,12 @@ Tournament Bracket record using postgres sql and python
 flask and sqlalchemy backend with html and css frontend.
 
 Features:
-  * allows someone to host a tournament with most of the logistics taken care of
+  * Allows someone to host a tournament with most of the logistics taken care of
 
 Known Issues:
-  * ugly
+  * Ugly
   * Not very intuitive to use
   * Can be broken by user input
-  * no match history
+  * No match history
 
 Try [here](https://vywren.pythonanywhere.com/):
